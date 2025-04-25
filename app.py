@@ -4,23 +4,49 @@ import streamlit as st
 import pickle
 import pandas as pd
 
-# URLs for external hosting (replace with your actual Google Drive direct-download links)
-FILE_URLS = {
-    'movie_dict.pkl': 'https://drive.google.com/uc?export=download&id=1KT-hPLE2SccRDOlk60cBRlzg34NsJjkj',
-    'similarity.pkl': 'https://drive.google.com/uc?export=download&id=1jd9FlPHC_aT-CNTCKv_ZDICTrxJLzkRf'
+def download_file_from_google_drive(file_id, destination):
+    """
+    Downloads a file from Google Drive using the file ID.
+    Handles the confirmation page and downloads the actual file.
+    """
+    def get_confirm_token(response):
+        for key, value in response.cookies.items():
+            if key.startswith('download_warning'):
+                return value
+        return None
+
+    def save_response_content(response, destination):
+        CHUNK_SIZE = 32768
+        with open(destination, "wb") as f:
+            for chunk in response.iter_content(CHUNK_SIZE):
+                if chunk:
+                    f.write(chunk)
+
+    URL = "https://drive.google.com/uc?export=download"
+    session = requests.Session()
+    response = session.get(URL, params={'id': file_id}, stream=True)
+    token = get_confirm_token(response)
+
+    if token:
+        params = {'id': file_id, 'confirm': token}
+        response = session.get(URL, params=params, stream=True)
+
+    save_response_content(response, destination)
+
+# URLs for external hosting with file IDs
+FILE_IDS = {
+    'movie_dict.pkl': '1KT-hPLE2SccRDOlk60cBRlzg34NsJjkj',
+    'similarity.pkl': '1jd9FlPHC_aT-CNTCKv_ZDICTrxJLzkRf'
 }
 
 @st.cache_data
 def load_data():
     # Download and load files
-    for filename, url in FILE_URLS.items():
+    for filename, file_id in FILE_IDS.items():
         try:
             if not os.path.exists(filename):
                 with st.spinner(f'Downloading {filename}...'):
-                    response = requests.get(url)
-                    response.raise_for_status()
-                    with open(filename, 'wb') as f:
-                        f.write(response.content)
+                    download_file_from_google_drive(file_id, filename)
         except Exception as e:
             st.error(f"Error downloading {filename}: {str(e)}")
             return None, None
