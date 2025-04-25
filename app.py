@@ -1,4 +1,4 @@
-```python
+
 import os
 import requests
 import streamlit as st
@@ -107,4 +107,3 @@ if not st.session_state.get('loaded'):
         with col:
             st.text(name)
             st.image(poster)
-```
